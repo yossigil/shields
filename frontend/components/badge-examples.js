@@ -3,12 +3,17 @@ import { Link } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import classNames from 'classnames'
 import resolveBadgeUrl from '../lib/badge-url'
+import { staticBadgeUrl } from '../../lib/make-badge-url'
 
 const Badge = ({
   title,
+  base,
+  pattern,
+  namedParams,
   exampleUrl,
+  queryParams,
+  preview,
   previewUrl,
-  urlPattern,
   documentation,
   baseUrl,
   longCache,
@@ -19,28 +24,36 @@ const Badge = ({
     ? () =>
         onClick({
           title,
+          base,
+          pattern,
+          namedParams,
           exampleUrl,
+          queryParams,
+          preview,
           previewUrl,
-          urlPattern,
           documentation,
         })
     : undefined
 
+  const serviceBase = base ? `${baseUrl}/${base}/` : baseUrl
+
+  if (preview) {
+    previewUrl = staticBadgeUrl({ baseUrl, ...preview })
+  }
   const previewImage = previewUrl ? (
     <img
       className={classNames('badge-img', { clickable: onClick })}
       onClick={handleClick}
-      src={resolveBadgeUrl(previewUrl, baseUrl, { longCache })}
+      src={resolveBadgeUrl(previewUrl, serviceBase, { longCache })}
       alt=""
     />
   ) : (
     '\u00a0'
   ) // non-breaking space
-  const resolvedExampleUrl = resolveBadgeUrl(
-    urlPattern || previewUrl,
-    baseUrl,
-    { longCache: false }
-  )
+
+  const resolvedPattern = resolveBadgeUrl(pattern || previewUrl, serviceBase, {
+    longCache: false,
+  })
 
   if (shouldDisplay()) {
     return (
@@ -57,7 +70,7 @@ const Badge = ({
             className={classNames({ clickable: onClick })}
             onClick={handleClick}
           >
-            {resolvedExampleUrl}
+            {resolvedPattern}
           </code>
         </td>
       </tr>
@@ -67,9 +80,13 @@ const Badge = ({
 }
 Badge.propTypes = {
   title: PropTypes.string.isRequired,
+  base: PropTypes.string,
+  pattern: PropTypes.string,
+  namedParams: PropTypes.object,
   exampleUrl: PropTypes.string,
+  queryParams: PropTypes.object,
+  preview: PropTypes.object,
   previewUrl: PropTypes.string,
-  urlPattern: PropTypes.string,
   documentation: PropTypes.string,
   baseUrl: PropTypes.string,
   longCache: PropTypes.bool.isRequired,
@@ -110,9 +127,13 @@ Category.propTypes = {
   examples: PropTypes.arrayOf(
     PropTypes.shape({
       title: PropTypes.string.isRequired,
+      base: PropTypes.string,
+      pattern: PropTypes.string,
+      namedParams: PropTypes.object,
       exampleUrl: PropTypes.string,
+      queryParams: PropTypes.object,
+      preview: PropTypes.object,
       previewUrl: PropTypes.string,
-      urlPattern: PropTypes.string,
       documentation: PropTypes.string,
     })
   ).isRequired,

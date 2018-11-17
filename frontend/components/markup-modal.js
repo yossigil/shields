@@ -2,17 +2,22 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import Modal from 'react-modal'
 import ClickToSelect from '@mapbox/react-click-to-select'
+import { advertisedStyles } from '../../supported-features.json'
+import { makeBadgeUrlFromPattern } from '../../lib/make-badge-url'
 import resolveBadgeUrl from '../lib/badge-url'
 import generateAllMarkup from '../lib/generate-image-markup'
-import { advertisedStyles } from '../../supported-features.json'
 
 export default class MarkupModal extends React.Component {
   static propTypes = {
     example: PropTypes.shape({
       title: PropTypes.string.isRequired,
+      base: PropTypes.string,
+      pattern: PropTypes.string,
+      namedParams: PropTypes.object,
       exampleUrl: PropTypes.string,
+      queryParams: PropTypes.object,
+      preview: PropTypes.object,
       previewUrl: PropTypes.string,
-      urlPattern: PropTypes.string,
       documentation: PropTypes.string,
       link: PropTypes.string,
     }),
@@ -34,17 +39,15 @@ export default class MarkupModal extends React.Component {
     // user.
     const { example, baseUrl } = props
     if (example) {
-      const { exampleUrl, urlPattern, previewUrl, link } = example
+      const { base, pattern, previewUrl, link } = example
+      const serviceBase = base ? `${baseUrl}/${base}/` : baseUrl
       this.state = {
         ...this.state,
-        exampleUrl: exampleUrl
-          ? resolveBadgeUrl(exampleUrl, baseUrl || window.location.href)
-          : null,
         badgeUrl: resolveBadgeUrl(
-          urlPattern || previewUrl,
-          baseUrl || window.location.href
+          pattern || previewUrl,
+          serviceBase || window.location.href
         ),
-        link: !link ? '' : link,
+        link: link || '',
       }
     }
   }
@@ -53,7 +56,7 @@ export default class MarkupModal extends React.Component {
     return this.props.example !== null
   }
 
-  generateCompleteBadgeUrl() {
+  generateLivePreviewUrl() {
     const { baseUrl } = this.props
     const { badgeUrl, style } = this.state
 
@@ -72,8 +75,8 @@ export default class MarkupModal extends React.Component {
 
     const { title } = this.props.example
     const { link } = this.state
-    const completeBadgeUrl = this.generateCompleteBadgeUrl()
-    return generateAllMarkup(completeBadgeUrl, link, title)
+    const livePreviewUrl = this.generateLivePreviewUrl()
+    return generateAllMarkup(livePreviewUrl, link, title)
   }
 
   renderDocumentation() {
@@ -91,11 +94,45 @@ export default class MarkupModal extends React.Component {
   }
 
   render() {
+    if (!this.isOpen) {
+      return (
+        <Modal
+          isOpen={this.isOpen}
+          onRequestClose={this.props.onRequestClose}
+          contentLabel="Example Modal"
+        />
+      )
+    }
+
+    const { baseUrl } = this.props
+    const {
+      example: { base, pattern, namedParams, exampleUrl },
+    } = this.props
+
+    const serviceBase = base ? `${baseUrl}/${base}/` : baseUrl
+
     const { markdown, reStructuredText, asciiDoc } = this.generateMarkup()
 
-    const completeBadgeUrl = this.isOpen
-      ? this.generateCompleteBadgeUrl()
+    const livePreviewUrl = this.isOpen
+      ? this.generateLivePreviewUrl()
       : undefined
+
+    let exampleUrlToRender
+    if (namedParams) {
+      exampleUrlToRender = resolveBadgeUrl(
+        makeBadgeUrlFromPattern({
+          base,
+          pattern,
+          namedParams,
+        }),
+        serviceBase || window.location.href
+      )
+    } else if (exampleUrl) {
+      exampleUrlToRender = resolveBadgeUrl(
+        exampleUrl,
+        serviceBase || window.location.href
+      )
+    }
 
     return (
       <Modal
@@ -105,7 +142,7 @@ export default class MarkupModal extends React.Component {
       >
         <form action="">
           <p>
-            <img className="badge-img" src={completeBadgeUrl} />
+            <img className="badge-img" src={livePreviewUrl} />
           </p>
           <p>
             <label>
@@ -131,14 +168,14 @@ export default class MarkupModal extends React.Component {
               />
             </label>
           </p>
-          {this.state.exampleUrl && (
+          {exampleUrlToRender && (
             <p>
               Example&nbsp;
               <ClickToSelect>
                 <input
                   className="code clickable"
                   readOnly
-                  value={this.state.exampleUrl}
+                  value={exampleUrlToRender}
                 />
               </ClickToSelect>
             </p>

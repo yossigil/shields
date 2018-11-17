@@ -3,7 +3,6 @@
 // See available emoji at http://emoji.muan.co/
 const emojic = require('emojic')
 const Joi = require('joi')
-const queryString = require('query-string')
 const pathToRegexp = require('path-to-regexp')
 const {
   NotFound,
@@ -168,35 +167,25 @@ class BaseService {
         keywords,
       } = validateExample(example, index, this)
 
-      const stringified = queryString.stringify(query)
-      const suffix = stringified ? `?${stringified}` : ''
-
-      let outExampleUrl
-      let outPreviewUrl
-      let outPattern
-      if (namedParams) {
-        outExampleUrl = this._makeFullUrlFromParams(pattern, namedParams)
-        outPreviewUrl = this._makeStaticExampleUrl(staticExample)
-        outPattern = `${this._dotSvg(this._makeFullUrl(pattern))}${suffix}`
-      } else if (staticExample) {
-        outExampleUrl = `${this._dotSvg(
-          this._makeFullUrl(exampleUrl)
-        )}${suffix}`
-        outPreviewUrl = this._makeStaticExampleUrl(staticExample)
-        outPattern = `${this._dotSvg(this._makeFullUrl(pattern))}${suffix}`
-      } else {
-        outExampleUrl = undefined
-        outPreviewUrl = `${this._dotSvg(
-          this._makeFullUrl(previewUrl)
-        )}${suffix}`
-        outPattern = undefined
+      let staticExampleData
+      if (staticExample) {
+        const badgeData = this._makeBadgeData({}, staticExample)
+        staticExampleData = {
+          label: badgeData.text[0],
+          message: `${badgeData.text[1]}`,
+          color: badgeData.colorscheme || badgeData.colorB,
+        }
       }
 
       return {
         title: title ? `${title}` : this.name,
-        exampleUrl: outExampleUrl,
-        previewUrl: outPreviewUrl,
-        urlPattern: outPattern,
+        base: this.route.base,
+        pattern,
+        namedParams,
+        exampleUrl,
+        queryParams: query,
+        preview: staticExampleData,
+        legacyPreviewUrl: previewUrl,
         documentation,
         keywords,
       }
